@@ -271,6 +271,7 @@
       <span style="font-size:.75rem">PNG · JPG · WebP · GIF</span>
       <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/gif">
     </div>
+    <button class="btn" id="loadExample" style="margin-top:10px">Load example tile</button>
     <div class="thumb-wrap" id="thumbWrap">
       <img id="thumb" alt="tile thumbnail">
       <div class="thumb-meta"><b id="tileName">tile.png</b><span id="tileDims">—</span></div>
@@ -386,6 +387,23 @@
     reader.onerror = function () { setStatus("Could not read that file.", false); };
     reader.readAsDataURL(file);
   }
+
+  function loadExample() {
+    var c = document.createElement("canvas");
+    c.width = 16; c.height = 16;
+    var x = c.getContext("2d");
+    x.fillStyle = "#3a7d44"; x.fillRect(0, 0, 16, 16);
+    x.fillStyle = "#2f6a3a";
+    for (var i = 0; i < 16; i++) { if ((i * 7 + 3) % 5 === 0) x.fillRect(i, 0, 1, 16); }
+    x.fillStyle = "#4cd98a";
+    x.fillRect(3, 3, 2, 2); x.fillRect(11, 7, 2, 2); x.fillRect(5, 11, 2, 2);
+    x.fillStyle = "#8b5a2b"; x.fillRect(7, 12, 2, 4);
+    x.fillStyle = "#5aa9ff"; x.fillRect(0, 15, 16, 1);
+    c.toBlob(function (blob) {
+      if (blob) loadFile(new File([blob], "example-tile.png", { type: "image/png" }));
+    }, "image/png");
+  }
+  document.getElementById("loadExample").addEventListener("click", loadExample);
 
   drop.addEventListener("click", function () { fileInput.click(); });
   fileInput.addEventListener("change", function () {
