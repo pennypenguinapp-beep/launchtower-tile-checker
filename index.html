@@ -271,6 +271,7 @@
       <span style="font-size:.75rem">PNG · JPG · WebP · GIF</span>
       <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/gif">
     </div>
+    <button class="btn ghost" id="loadExample" type="button">Load example tile</button>
     <div class="thumb-wrap" id="thumbWrap">
       <img id="thumb" alt="tile thumbnail">
       <div class="thumb-meta"><b id="tileName">tile.png</b><span id="tileDims">—</span></div>
@@ -387,6 +388,45 @@
     reader.onerror = function () { setStatus("Could not read that file.", false); };
     reader.readAsDataURL(file);
   }
+
+  function loadImage(img, name) {
+    tile = img;
+    thumb.src = img.src;
+    tileName.textContent = name;
+    tileDims.textContent = img.naturalWidth + " \u00d7 " + img.naturalHeight + " px";
+    thumbWrap.classList.add("show");
+    download.disabled = false;
+    resetBtn.disabled = false;
+    hint.style.display = "none";
+    canvas.style.display = "block";
+    setStatus("Tile loaded \u2014 drag the sliders to test it.", true);
+    render();
+  }
+
+  function makeExampleTile() {
+    var c = document.createElement("canvas");
+    c.width = 32; c.height = 32;
+    var x = c.getContext("2d");
+    x.imageSmoothingEnabled = false;
+    x.fillStyle = "#3a7d44"; x.fillRect(0, 0, 32, 32);
+    x.fillStyle = "#4c9a58";
+    for (var i = 0; i < 24; i++) x.fillRect((i * 7 + 3) % 32, (i * 11 + 5) % 32, 2, 2);
+    x.fillStyle = "#2c5f34";
+    for (var j = 0; j < 14; j++) x.fillRect((j * 13 + 9) % 32, (j * 5 + 2) % 32, 1, 1);
+    x.fillStyle = "#8a6b3f"; x.fillRect(14, 26, 4, 6);
+    x.fillStyle = "#5d4527"; x.fillRect(15, 26, 2, 6);
+    x.fillStyle = "#4c9a58"; x.fillRect(12, 22, 8, 5);
+    x.fillStyle = "#67c07a"; x.fillRect(13, 23, 6, 3);
+    x.fillStyle = "#e8d44f"; x.fillRect(15, 24, 2, 2);
+    x.fillStyle = "#b03a3a"; x.fillRect(26, 8, 3, 3);
+    x.fillStyle = "#e8d44f"; x.fillRect(5, 5, 2, 2);
+    x.fillStyle = "#3a7d44"; x.fillRect(5, 4, 2, 1);
+    var img = new Image();
+    img.onload = function () { loadImage(img, "example-tile.png"); };
+    img.src = c.toDataURL("image/png");
+  }
+  var loadExampleBtn = document.getElementById("loadExample");
+  loadExampleBtn.addEventListener("click", function () { makeExampleTile(); });
 
   drop.addEventListener("click", function () { fileInput.click(); });
   fileInput.addEventListener("change", function () {
