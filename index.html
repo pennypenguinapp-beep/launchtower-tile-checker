@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seamless Tile Checker — LaunchTower</title>
+<style>
+  :root {
+    --bg: #14161c;
+    --panel: #1c1f28;
+    --panel2: #232734;
+    --border: #2e3342;
+    --text: #e6e9f0;
+    --muted: #8b93a7;
+    --accent: #5aa9ff;
+    --accent2: #3d7fd6;
+    --ok: #4cd98a;
+    --warn: #ffb454;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.5;
+  }
+  header {
+    padding: 20px 24px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 1.35rem; font-weight: 650; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  header p { color: var(--muted); font-size: .85rem; margin-top: 4px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 16px;
+    padding: 16px 24px 24px;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel h2 {
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .drop {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 22px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    font-size: .85rem;
+    color: var(--muted);
+  }
+  .drop:hover, .drop.drag { border-color: var(--accent); background: rgba(90,169,255,.06); color: var(--text); }
+  .drop b { color: var(--accent); }
+  input[type=file] { display: none; }
+  .thumb-wrap {
+    margin-top: 12px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .thumb-wrap.show { display: flex; }
+  .thumb-wrap img {
+    width: 44px; height: 44px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background:
+      linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%),
+      linear-gradient(45deg, #333 25%, #222 25%, #222 75%, #333 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 5px 5px;
+    border-radius: 4px;
+  }
+  .thumb-meta { font-size: .78rem; color: var(--muted); }
+  .thumb-meta b { color: var(--text); display: block; font-size: .82rem; }
+  .ctl { margin-top: 16px; }
+  .ctl label {
+    display: flex;
+    justify-content: space-between;
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .ctl label output { color: var(--text); font-variant-numeric: tabular-nums; }
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--panel2);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+  .seg {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .seg button {
+    flex: 1;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .82rem;
+    transition: all .12s;
+  }
+  .seg button.active {
+    background: rgba(90,169,255,.14);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    font-size: .82rem;
+    color: var(--muted);
+  }
+  .switch { position: relative; width: 38px; height: 21px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 21px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .slider::before {
+    content: "";
+    position: absolute;
+    width: 15px; height: 15px;
+    left: 2px; top: 2px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform .15s, background .15s;
+  }
+  .switch input:checked + .slider { background: rgba(90,169,255,.25); border-color: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(17px); background: var(--accent); }
+  .btn {
+    display: block;
+    width: 100%;
+    margin-top: 18px;
+    padding: 11px 0;
+    background: var(--accent2);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .btn:hover { background: var(--accent); }
+  .btn:disabled { background: var(--panel2); color: var(--muted); cursor: not-allowed; }
+  .btn.ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .btn.ghost:hover { color: var(--text); border-color: var(--muted); background: transparent; }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 420px;
+    background:
+      linear-gradient(45deg, #1a1d26 25%, transparent 25%, transparent 75%, #1a1d26 75%),
+      linear-gradient(45deg, #1a1d26 25%, #15171e 25%, #15171e 75%, #1a1d26 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    overflow: auto;
+  }
+  .stage canvas {
+    image-rendering: pixelated;
+    border-radius: 4px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.45);
+    max-width: 100%;
+  }
+  .stage .hint {
+    color: var(--muted);
+    font-size: .9rem;
+    text-align: center;
+    max-width: 320px;
+  }
+  .stage .hint .big { font-size: 2rem; display: block; margin-bottom: 8px; }
+  .status {
+    margin-top: 10px;
+    font-size: .78rem;
+    color: var(--ok);
+    min-height: 1.2em;
+    text-align: center;
+  }
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 14px 24px;
+    text-align: center;
+    font-size: .78rem;
+    color: var(--muted);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  .tip {
+    margin-top: 14px;
+    font-size: .75rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+  .tip b { color: var(--text); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Seamless <span>Tile Checker</span></h1>
+  <p>Upload a tile, repeat it in a grid, and hunt down seams before they ship in your game.</p>
+</header>
+<main>
+  <div class="panel">
+    <h2>Tile</h2>
+    <div class="drop" id="drop">
+      <b>Drop a tile</b> or click to browse<br>
+      <span style="font-size:.75rem">PNG · JPG · WebP · GIF</span>
+      <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/gif">
+    </div>
+    <div class="thumb-wrap" id="thumbWrap">
+      <img id="thumb" alt="tile thumbnail">
+      <div class="thumb-meta"><b id="tileName">tile.png</b><span id="tileDims">—</span></div>
+    </div>
+
+    <div class="ctl">
+      <label>Grid size</label>
+      <div class="seg" id="gridSeg">
+        <button data-n="3" class="active">3 × 3</button>
+        <button data-n="5">5 × 5</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <label>Zoom <output id="zoomOut">4×</output></label>
+      <input type="range" id="zoom" min="1" max="16" step="1" value="4">
+    </div>
+
+    <div class="ctl">
+      <label>Half-offset <output id="offOut">0 px</output></label>
+      <input type="range" id="offset" min="0" max="1" step="0.01" value="0">
+      <div style="font-size:.72rem;color:var(--muted);margin-top:6px">
+        Slide to shift the repeat by a fraction of the tile — great for exposing edge seams.
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <span>Grid lines</span>
+      <label class="switch">
+        <input type="checkbox" id="gridLines">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <button class="btn" id="download" disabled>Download tiled preview PNG</button>
+    <button class="btn ghost" id="reset" disabled>Reset tile</button>
+
+    <div class="tip">
+      <b>Pro tip:</b> set half-offset to 0.5 and watch the grid — if the tile is truly seamless, nothing changes. Any flash of a hard edge is a seam.
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="hint" id="hint">
+      <span class="big">🧩</span>
+      Load a tile on the left to see it repeated here.
+    </div>
+    <canvas id="canvas" style="display:none"></canvas>
+    <div class="status" id="status"></div>
+  </div>
+</main>
+<footer>
+  Built by <a href="https://pennypenguinapp-beep.github.io/" target="_blank" rel="noopener">LaunchTower</a> — free tools for pixel artists &amp; game devs.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var drop = document.getElementById("drop");
+  var fileInput = document.getElementById("file");
+  var thumbWrap = document.getElementById("thumbWrap");
+  var thumb = document.getElementById("thumb");
+  var tileName = document.getElementById("tileName");
+  var tileDims = document.getElementById("tileDims");
+  var gridSeg = document.getElementById("gridSeg");
+  var zoom = document.getElementById("zoom");
+  var zoomOut = document.getElementById("zoomOut");
+  var offset = document.getElementById("offset");
+  var offOut = document.getElementById("offOut");
+  var gridLines = document.getElementById("gridLines");
+  var download = document.getElementById("download");
+  var resetBtn = document.getElementById("reset");
+  var canvas = document.getElementById("canvas");
+  var hint = document.getElementById("hint");
+  var status = document.getElementById("status");
+
+  var tile = null;        // HTMLImageElement
+  var gridN = 3;
+  var zoomN = 4;
+  var halfOffset = 0;     // 0..1 fraction of tile size
+  var showGrid = false;
+
+  function setStatus(msg, ok) {
+    status.textContent = msg || "";
+    status.style.color = ok === false ? "var(--warn)" : "var(--ok)";
+  }
+
+  function loadFile(file) {
+    if (!file || !file.type || file.type.indexOf("image/") !== 0) {
+      setStatus("That doesn't look like an image file.", false);
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        tile = img;
+        thumb.src = e.target.result;
+        tileName.textContent = file.name || "tile";
+        tileDims.textContent = img.naturalWidth + " × " + img.naturalHeight + " px";
+        thumbWrap.classList.add("show");
+        download.disabled = false;
+        resetBtn.disabled = false;
+        hint.style.display = "none";
+        canvas.style.display = "block";
+        setStatus("Tile loaded — drag the sliders to test it.", true);
+        render();
+      };
+      img.onerror = function () { setStatus("Could not decode that image.", false); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function () { setStatus("Could not read that file.", false); };
+    reader.readAsDataURL(file);
+  }
+
+  drop.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () {
+    if (fileInput.files && fileInput.files[0]) loadFile(fileInput.files[0]);
+    fileInput.value = "";
+  });
+  ["dragenter", "dragover"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("drag"); });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("drag"); });
+  });
+  drop.addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+      loadFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  gridSeg.addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn) return;
+    gridN = parseInt(btn.dataset.n, 10);
+    Array.prototype.forEach.call(gridSeg.children, function (b) {
+      b.classList.toggle("active", b === btn);
+    });
+    render();
+  });
+
+  zoom.addEventListener("input", function () {
+    zoomN = parseInt(zoom.value, 10);
+    zoomOut.textContent = zoomN + "×";
+    render();
+  });
+
+  offset.addEventListener("input", function () {
+    halfOffset = parseFloat(offset.value);
+    offOut.textContent = Math.round(halfOffset * 100) + "%";
+    render();
+  });
+
+  gridLines.addEventListener("change", function () {
+    showGrid = gridLines.checked;
+    render();
+  });
+
+  resetBtn.addEventListener("click", function () {
+    tile = null;
+    thumbWrap.classList.remove("show");
+    download.disabled = true;
+    resetBtn.disabled = true;
+    hint.style.display = "block";
+    canvas.style.display = "none";
+    canvas.width = 0; canvas.height = 0;
+    setStatus("", true);
+  });
+
+  function render() {
+    if (!tile) return;
+    var w = tile.naturalWidth;
+    var h = tile.naturalHeight;
+    var cellW = w * zoomN;
+    var cellH = h * zoomN;
+    var totalW = cellW * gridN;
+    var totalH = cellH * gridN;
+    var dx = halfOffset * w * zoomN;
+    var dy = halfOffset * h * zoomN;
+
+    canvas.width = totalW;
+    canvas.height = totalH;
+    var ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, totalW, totalH);
+
+    // Draw the tile repeated, shifted by (dx, dy). To keep edges filled,
+    // draw a 3x3 superset of cells around the visible area.
+    var startX = Math.floor(-dx / cellW) - 1;
+    var startY = Math.floor(-dy / cellH) - 1;
+    var cols = gridN + 3;
+    var rows = gridN + 3;
+    for (var ry = startY; ry < startY + rows; ry++) {
+      for (var cx = startX; cx < startX + cols; cx++) {
+        ctx.drawImage(tile, cx * cellW + dx, ry * cellH + dy, cellW, cellH);
+      }
+    }
+
+    if (showGrid) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 1;
+      // Lines at the effective tile boundaries (shifted by offset)
+      var ox = ((dx % cellW) + cellW) % cellW;
+      var oy = ((dy % cellH) + cellH) % cellH;
+      for (var gx = ox; gx <= totalW; gx += cellW) {
+        var x = Math.round(gx) + 0.5;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, totalH); ctx.stroke();
+      }
+      for (var gy = oy; gy <= totalH; gy += cellH) {
+        var y = Math.round(gy) + 0.5;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(totalW, y); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  download.addEventListener("click", function () {
+    if (!tile) return;
+    try {
+      var url = canvas.toDataURL("image/png");
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "tile-preview-" + gridN + "x" + gridN + "-" + zoomN + "x.png";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setStatus("Preview downloaded.", true);
+    } catch (err) {
+      setStatus("Download failed: " + err.message, false);
+    }
+  });
+})();
+</script>
+</body>
+</html>
